@@ -9,14 +9,14 @@ Brainfuck consists of 8 instructions. Any other character is ignored and can be 
 
 | Instruction | Meaning |
 |-------------|---------|
-| &gt; | Move data pointer right. |
-| &lt; | Move data pointer left. |
-| + | Incrememt memory at pointer. |
-| - | Decrement memory at pointer. |
-| . | Output character in memory at pointer. |
-| , | Input character to memory at pointer. |
-| [ | Jump to matching ] if memory at pointer is zero. |
-| ] | Jump to matching [ if memory at pointer in nonzero. |
+| **&gt;** | Move data pointer right. |
+| **&lt;** | Move data pointer left. |
+| **+** | Incrememt memory at pointer. |
+| **-** | Decrement memory at pointer. |
+| **.** | Output character in memory at pointer. |
+| **,** | Input character to memory at pointer. |
+| **[** | Jump to matching ] if memory at pointer is zero. |
+| **]** | Jump to matching [ if memory at pointer in nonzero. |
 
 Typically, memory locations are 1 byte, and the memory is expected to span infinitely to the right
 from the 0th (starting) location. (The original implementation had memory limited to 30k bytes.)
