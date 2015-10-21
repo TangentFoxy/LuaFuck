@@ -1,3 +1,13 @@
+local version = {
+    major = 0,
+    minor = 1,
+    patch = 0,
+    expletive = "Dagobah",
+    toString = function()
+        return "LuaFuck version "..version.major.."."..version.minor.."."..version.patch.." "..version.expletive
+    end
+}
+
 --[[ Brainfuck Notes
 
     Brainfuck spec:
@@ -132,51 +142,139 @@ partials = {
     minusCheck = "while m[c]<0 do m[c]=m[c]+256 end "
 }
 
+--TODO make partials_debug
+
+local Help = [[
+NAME
+    luafuck.lua - Compiles Brainfuck code into Lua code.
+SYNOPSIS
+    lua luafuck.lua INPUT [OPTIONS] [filename]
+DESCRIPTION
+    Compiles Brainfuck into Lua code.
+    -v, --version
+        output version
+    -V, --verbose
+        verbose output
+    -d, --debug
+        debug statements will be placed in the output code printing changes to
+        the state of the program while it runs
+    -o filename, --out=filename
+        output filename to use (will append .lua to it if you don't)
+    -e extension1 extension2, --extensions=extension1,extension2
+        a list of extensions to enable
+    -h, --help
+        show this help
+    (Note: Passing -- won't stop further optionss from going through.
+     Deal with it (possibly by submitting a patch for it).)
+EXTENSIONS
+    No extensions are supported at this time. They will be in future versions.
+]]
+
+-- default options
+local OUT_FILE = arguments[1]:sub(1, -4) --.. ".lua"
+local CONVERSION_SET = conversions
+local VERBOSE = false
+local DEBUG = false
+local EXTENSIONS = {}
+
 -- get our arguments
 local arguments = {...}
 
--- util to check which options are selected
+-- checks which options are selected
 local function selected(option)
-    for _,v in pairs(arguments) do
+    for k,v in pairs(arguments) do
         if v == option then
-            return true
+            return true, k
         end
-        print(_,v)
+        --print(k,v) --TEMP
     end
     return false
 end
 
-selected()
+-- shitty checks partial options existing
+local function selectedPartial(option)
+    for k,v in pairs(arguments) do
+        if v:find(option) then
+            return true, k
+        end
+    end
+    return false
+end
 
---[[ Options
-    -v output version, do nothing else
-    -V verbose output (NOT IMPLEMENTED)
-]]
+-- easy options
+if selected("-v") or selected("--version") then
+    print(version.toString())
+    return 0
+end
+if selected("-V") or selected("--verbose") then
+    VERBOSE = true
+end
+if selected("-d") or selected("--debug") then
+    --DEBUG = true
+    CONVERSION_SET = CONVERSION_SET .. "_debug"
+end
+if selected("-h") or selected("--help") then
+    print(Help)
+    return 0
+end
 
+-- more complicated (and shittily coded!) options
+local fileSpecified, argPlace = selected("-o")
+if not fileSpecified then
+    fileSpecified, argPlace = selectedPartial("--out=")
+    if fileSpecified then
+        OUT_FILE = arguments[argPlace-1]:sub(7)
+    end
+else
+    OUT_FILE = arguments[argPlace-1]
+end
+-- now make sure it has a proper extension!
+if not OUT_FILE:find(".lua") then
+    OUT_FILE = OUT_FILE .. ".lua"
+end
 
-
---TODO check args here,
--- (TEMP => assume 1 arg, filename, out to filename.lua)
--- TEMP assume want debug conversions
-local fileName = arguments[1]
-local CONVERT = conversions_debug
---local CONVERT = conversions
-
--- open output file
-local outFile = io.open(fileName:sub(1, -4) .. ".lua", "w") --TODO verify correctness
-
--- write bootstrap
-outFile:write(bootstrap)
-
--- loop through input file and process it
-for line in io.lines(fileName) do
-    for i=1,line:len() do
-        local character = line:sub(i,i)
-        if CONVERT[character] then outFile:write(CONVERT[character]) end
+-- yay verbosity!
+if VERBOSE then
+    print(version.toString() .. " has started!")
+    print("ARGUMENTS:")
+    for k,v in pairs(arguments) do
+        print(k, v)
+    end
+    print("Options:")
+    print("OUT_FILE", OUT_FILE)
+    print("VERBOSE", VERBOSE)
+    print("DEBUG", DEBUG)
+    print("CONVERSION_SET", CONVERSION_SET, "(should say _debug at end if DEBUG == true)")
+    print("EXTENSIONS:")
+    for k,v in pairs(EXTENSIONS) do
+        print(k, v)
+    end
+    if #EXTENSIONS < 1 then
+        print(0, "none")
     end
 end
 
-outFile:close()
+-- open output file
+local outFileHandle = io.open(OUT_FILE, "w")
+if VERBOSE then print("Opened "..OUT_FILE.." for output.") end
 
--- TODO print success / error / etc
-print("success?")
+-- write bootstrap
+if VERBOSE then print("Writing bootstrap code...") end
+outFileHandle:write(bootstrap)
+if VERBOSE then print("Done.") end
+
+-- loop through input file and process it
+if VERBOSE then print("Opening input...") end
+for line in io.lines(OUT_FILE) do
+    if VERBOSE then print("Read line:", line) end
+    for i=1,line:len() do
+        local character = line:sub(i,i)
+        if CONVERSION_SET[character] then outFileHandle:write(CONVERSION_SET[character]) end
+        if VERBOSE then print("Wrote to output:", CONVERSION_SET[character])
+    end
+end
+
+if VERBOSE then print("Done. Closing files.") end
+outFileHandle:close()
+
+print("Assuming this didn't break somewhere, everything seems done! :D")

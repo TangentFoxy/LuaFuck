@@ -1,14 +1,26 @@
 #!/bin/bash
 
+echo "Beginning tests! :o"
+echo "Let's see what version we're using."
+lua ./luafuck.lua -v
+echo "And again (with --version):"
+lua ./luafuck.lua --version
+echo "What else can we do?"
+lua ./luafuck.lua -h
+echo "And --help (just to check it works)"
+lua ./luafuck.lua --help
+
 # Of course, we must start with a Hello World!
+echo "Now let's compile (and run!) a hello world:"
 lua ./luafuck.lua ./testing/helloworld.bf
-echo "The following line should be \"Hello World!\":"
 lua ./testing/helloworld.lua
 
 # This version of Hello World is intended to expose BF interpreter errors.
+echo "This version of hello world apparently tends to cause errors in badly written Brainfuck interpreters:"
 lua ./luafuck.lua ./testing/complexhello.bf
-echo "The following line should (again) be \"Hello World!\":"
 lua ./testing/complexhello.lua
+
+exit 0 #temp
 
 # Now we shall test the four versions of cat:
 # (Four versions because BF interpreters don't have a proper EOF handling standard.)
@@ -29,5 +41,3 @@ lua ./luafuck.lua ./testing/EOF/cat-1or.bf
 #echo "This is the EOF--1 (or unchanged) version of cat, please type some text and thenhit enter (hit enter with no text to exit):"
 echo "The EOF--1 (or unchanged) version of cat was compiled. This version typically   does not work, so please test it manually later."
 #lua ./testing/EOF/cat-1or.lua
-
-#TODO put other cat tests
