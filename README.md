@@ -18,21 +18,21 @@ lua luafuck.lua INPUT [OPTIONS] [filename]
 ## DESCRIPTION
 Compiles Brainfuck into Lua code.
 
-- -v, --version<br>
+- `-v, --version`<br>
   output version
-- -V, --verbose<br>
+- `-V, --verbose`<br>
   verbose output
-- -d, --debug<br>
+- `-d, --debug`<br>
   debug statements will be placed in the output code printing changes to
   the state of the program while it runs
-- -o filename, --out=filename<br>
+- `-o filename, --out=filename`<br>
   output filename to use (will append .lua to it if you don't)
-- -e extension1 extension2, --extensions=extension1,extension2<br>
+- `-e extension1 extension2, --extensions=extension1,extension2`<br>
   a list of extensions to enable
-- -h, --help<br>
+- `-h, --help`<br>
   show this help
 
-(Note: Passing -- won't stop further optionss from going through.
+(Note: Passing `--` won't stop further optionss from going through.
  Deal with it (possibly by submitting a patch for it).)
 
 ## EXTENSIONS
