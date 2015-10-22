@@ -53,12 +53,11 @@ FILES
 local bootstrap = {
     --TODO check if then can be condensed further by eliminating spaces after instances of "()"
     core = {
-        -- bootstrap.input needs to be placed DIRECTLY after this, or it breaks
-        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\","
+        -- r is 0 and then immediately set to a function by bootstrap.input
+        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",0"
     },
     input = {
-        -- remember, inputs start by setting r!
-        default = "function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end"
+        default = "r=function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end"
     },
     post = {
         default = "setmetatable(m,{__index=function() return 0 end})"
@@ -225,8 +224,6 @@ local function LuaFuck(...)
         print("Parsed options:")
 
         printTable(options)
-
-        return "FUCK TEMPRAORYFH CODED NEUDI WJA"
     end
 
     -- check that our input file exists
@@ -263,7 +260,7 @@ local function LuaFuck(...)
     end
     -- these are the ONLY two writes that should not have a prepended space
     outHandle:write(bootstrap.core[options.BOOTSTRAP.core])
-    outHandle:write(bootstrap.input[options.BOOTSTRAP.input])
+    outHandle:write(" " .. bootstrap.input[options.BOOTSTRAP.input])
     outHandle:write(" " .. bootstrap.post[options.BOOTSTRAP.post])
     if options.VERBOSE then
         print("Done.")
