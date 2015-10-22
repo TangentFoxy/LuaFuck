@@ -2,7 +2,7 @@
 local version = {
     major = 0,
     minor = 1,
-    patch = 0
+    patch = 1
 }
 --function version.toString()
 --    return "v"..version.major.."."..version.minor.."."..version.patch.."-Dagobah"
@@ -43,10 +43,6 @@ OPTIONS
 
 EXTENSIONS
     No extensions are supported at this time. They will be in future versions.
-
-FILES
-    luafuck.lua
-    conversions.lua
 ]]
 
 -- extra start code to support direct translation of instructions

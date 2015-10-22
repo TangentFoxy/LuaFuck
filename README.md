@@ -36,7 +36,3 @@ No extensions are supported at this time. They will be in future versions.
 
 For an idea of what an extension might be, check this project's issues:
 https://github.com/Guard13007/LuaFuck/issues
-
-## FILES
-luafuck.lua<br>
-conversions.lua
