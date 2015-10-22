@@ -1,13 +1,12 @@
 # LuaFuck
 Translation program to run Brainfuck code in Lua.
 
-Will support popular extensions and options (oh, and some basic optimizations!),
- but for now is fairly simple.
+Supports several command-line options and extensions, listed below.
 
-NOTE: Expects EOF to be 0, uses LF for enter (or at least it does in testing
-    on Linux (specifically Antergos)).
-
-Oh yeah! It even comes with a (WIP) test script! :D
+- Tested on Arch. (Has a test bash script so you can test stuff yourself.)
+- Cell size is 8 bits, memory length is unrestricted (except by the limits of Lua).
+  (This includes going left into negative indexes of memory.)
+- EOF is 10, Enter is 10.
 
 ## NAME
 luafuck.lua - Compiles Brainfuck code into Lua code.
@@ -15,9 +14,9 @@ luafuck.lua - Compiles Brainfuck code into Lua code.
 ## SYNOPSIS
 lua luafuck.lua INPUT [OPTIONS] [filename]
 
-## DESCRIPTION
-Compiles Brainfuck into Lua code.
+(Note: OPTIONS must be specified individually. `-vds` won't work for example.)
 
+## OPTIONS
 - `-v, --version`<br>
   output version
 - `-V, --verbose`<br>
@@ -32,11 +31,15 @@ Compiles Brainfuck into Lua code.
 - `-h, --help`<br>
   show this help
 
-(Note: Passing `--` won't stop further optionss from going through.
+(Note: Passing `--` won't stop further options from going through.
  Deal with it (possibly by submitting a patch for it).)
 
 ## EXTENSIONS
 No extensions are supported at this time. They will be in future versions.
 
-For an idea of what an extension might be, check the [Wikipedia page](https://en.wikipedia.org/wiki/Brainfuck)
-on Brainfuck, or the [Esolang Wiki page](https://esolangs.org/wiki/Brainfuck) on it.
+For an idea of what an extension might be, check this project's issues:
+https://github.com/Guard13007/LuaFuck/issues
+
+## FILES
+luafuck.lua<br>
+conversions.lua

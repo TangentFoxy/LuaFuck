@@ -16,11 +16,9 @@ lua ./luafuck.lua ./testing/helloworld.bf
 lua ./testing/helloworld.lua
 
 # This version of Hello World is intended to expose BF interpreter errors.
-echo "This version of hello world apparently tends to cause errors in badly written Brainfuck interpreters:"
+echo "This version of hello world apparently tends to cause errors in badly written   Brainfuck interpreters:"
 lua ./luafuck.lua ./testing/complexhello.bf
 lua ./testing/complexhello.lua
-
-exit 0 #temp
 
 # Now we shall test the four versions of cat:
 # (Four versions because BF interpreters don't have a proper EOF handling standard.)
@@ -41,3 +39,11 @@ lua ./luafuck.lua ./testing/EOF/cat-1or.bf
 #echo "This is the EOF--1 (or unchanged) version of cat, please type some text and thenhit enter (hit enter with no text to exit):"
 echo "The EOF--1 (or unchanged) version of cat was compiled. This version typically   does not work, so please test it manually later."
 #lua ./testing/EOF/cat-1or.lua
+
+lua ./luafuck.lua -d ./testing/addnext.bf
+echo "Okay, now we've compiled a small program with -d (which means it will print a   ton of debug info)"
+echo -n "Press enter to run it . . . "
+read -r
+lua ./testing/addnext.lua
+echo "---"
+echo "Basically, that should've printed a bunch of crap along with 8 at the end."
