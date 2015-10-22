@@ -1,32 +1,31 @@
+-- using semantic versioning
 local version = {
     major = 0,
     minor = 1,
-    patch = 0,
-    expletive = "Dagobah",
-    toString = nil
+    patch = 0
 }
-function version.toString()
-    return "LuaFuck version "..version.major.."."..version.minor.."."..version.patch.." "..version.expletive
-end
+--function version.toString()
+--    return "v"..version.major.."."..version.minor.."."..version.patch.."-Dagobah"
+--end
+setmetatable(version, {__tostring = function()
+    return "v"..version.major.."."..version.minor.."."..version.patch.."-Dagobah"
+    --this is kinda a lazy way of doing it..it really should just access itself somehow
+end})
 
--- set up the environment before translations with this
--- cell, memory, output (translation), write (to STDOUT), input (translation), buffer (of input), input (from STDIN, processed), then we set a metatable to make cells initialize to zero
-bootstrap = "c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",function() if b:len()==0 then b=io.read() end local O=b:sub(1,1) b=b:sub(2) return O end setmetatable(m,{__index=function() return 0 end}) "
-
--- "sets" are what we call the tables of translations of
---  Brainfuck instructions to be converted to Lua
-local sets = require "conversions"
-
-local Help = [[
+-- help output
+local help = [[
 NAME
     luafuck.lua - Compiles Brainfuck code into Lua code.
+
 SYNOPSIS
-    lua luafuck.lua INPUT [OPTIONS] [filename]
+    lua luafuck.lua [IN_FILE] [OPTIONS]
 
     (Note: OPTIONS must be specified individually.
      `-vds` won't work for example.)
+
 DESCRIPTION
     Compiles Brainfuck into Lua code.
+
 OPTIONS
     -v, --version
         output version
@@ -41,123 +40,274 @@ OPTIONS
         a list of extensions to enable
     -h, --help
         show this help
-    (Note: Passing -- won't stop further optionss from going through.
-     Deal with it (possibly by submitting a patch for it).)
+
 EXTENSIONS
     No extensions are supported at this time. They will be in future versions.
+
 FILES
     luafuck.lua
     conversions.lua
 ]]
 
--- get our arguments
+-- extra start code to support direct translation of instructions
+local bootstrap = {
+    --TODO check if then can be condensed further by eliminating spaces after instances of "()"
+    core = {
+        -- bootstrap.input needs to be placed DIRECTLY after this, or it breaks
+        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\","
+    },
+    input = {
+        -- remember, inputs start by setting r!
+        default = "function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end"
+    },
+    post = {
+        default = "setmetatable(m,{__index=function() return 0 end})"
+    }
+}
+
+-- direct translations of instructions to Lua (with some tweaks)
+local instructions = {
+    core = {
+        default = {
+            [">"] = "c=c+1",
+            ["<"] = "c=c-1",
+            ["+"] = "m[c]=m[c]+1",
+            ["-"] = "m[c]=m[c]-1",
+            ["."] = "w(o(m[c]))",
+            [","] = "m[c]=i(r())",
+            ["["] = "while m[c]~=0 do",
+            ["]"] = "end"
+        },
+        debug = {
+            [">"] = "c=c+1 print('POINTER: '..(c-1)..' > '..c)",
+            ["<"] = "c=c-1 print('POINTER: '..c..' < '..(c+1))",
+            ["+"] = "local t=m[c] m[c]=m[c]+1 w('CELL++: ')",
+            ["-"] = "local t=m[c] m[c]=m[c]-1 w('CELL--: ')",
+            ["."] = "local t=o(m[c]) w(t) if t==nil then t='nil' end print('PRINT: '..m[c]..' # '..t)",
+            [","] = "local t=r() m[c]=i(t) if t==nil then t='nil' end print('READ: '..t..' => '..m[c])",
+            ["["] = "print('WHILE NOT 0: START?\nCELL: '..m[c]) while m[c]~=0 do print('WHILE NOT 0: RUNNING')",
+            ["]"] = "end print('WHILE NOT 0: OVER')"
+        }
+    },
+    post = {
+        default = {
+            ["+"] = "if m[c]>255 then m[c]=0 end",
+            ["-"] = "if m[c]<0 then m[c]=255 end"
+        },
+        debug = {
+            ["+"] = "if m[c]>255 then m[c]=0 end print(t..' => '..m[c])",
+            ["-"] = "if m[c]<0 then m[c]=255 end print(t..' => '..m[c])"
+        }
+    }
+}
+
+-- compile options, including extensions enabled
+local options = {
+    IN_FILE = "",    -- set later
+    OUT_FILE = "",   -- set later
+    TO_FILE = false, -- will be set true if called, stays false if required
+
+    BOOTSTRAP = {
+        core = "default",
+        input = "default",
+        post = "default"
+    },
+    INSTRUCTION_SET = {
+        core = "default",
+        post = "default"
+    },
+    EXTENSIONS = {},
+
+    VERBOSE = false,
+    DEBUG = false,
+}
+
+-- argument handling
 local arguments = {...}
 
--- default options
-local OUT_FILE = arguments[1]:sub(1, -4) --.. ".lua"
-local CONVERSION_SET = "conversions"
-local VERBOSE = false
-local DEBUG = false
-local EXTENSIONS = {}
-
--- checks which options are selected
+-- check if an argument option was selected
 local function selected(option)
-    for k,v in pairs(arguments) do
+    for k,v in ipairs(arguments) do
         if v == option then
             return true, k
+        elseif v == "--" then
+            return false
         end
-        --print(k,v) --TEMP
     end
     return false
 end
 
--- shitty checks partial options existing
-local function selectedPartial(option)
-    for k,v in pairs(arguments) do
-        if v:find(option) then
+-- check for the more advanced options being selected
+local function fuzzySelected(option)
+    for k,v in ipairs(arguments) do
+        if v:find(option) == 1 then
             return true, k
+        elseif v == "--" then
+            return false
         end
     end
     return false
 end
 
--- easy options
-if selected("-v") or selected("--version") then
-    print(version.toString())
-    return 0
-end
-if selected("-V") or selected("--verbose") then
-    VERBOSE = true
-end
-if selected("-d") or selected("--debug") then
-    --DEBUG = true
-    CONVERSION_SET = CONVERSION_SET .. "_debug"
-end
-if selected("-h") or selected("--help") then
-    print(Help)
-    return 0
+-- used in verbose output to show options
+local function printTable(Table, currentDepth)
+    if not currentDepth then currentDepth = 0 end
+    local SPACER = ("  "):rep(currentDepth)
+
+    print(SPACER .. "{")
+
+    for k,v in pairs(Table) do
+        if type(v) == "table" then
+            print(SPACER .. k .. " =")
+            printTable(v, currentDepth + 1)
+        elseif type(v) == "string" then
+            print(SPACER .. k .. " = \"" .. v .. "\"")
+        else
+            print(SPACER .. k .. " = " .. tostring(v))
+        end
+    end
+
+    print(SPACER .. "}")
 end
 
--- more complicated (and shittily coded!) options
-local fileSpecified, argPlace = selected("-o")
-if not fileSpecified then
-    fileSpecified, argPlace = selectedPartial("--out=")
-    if fileSpecified then
-        OUT_FILE = arguments[argPlace-1]:sub(7)
+--TODO check for option strings (like -sdw or whatever) by doing a search for an
+-- arg that starts with a - and has more than 2 characters length, then parse
+-- any matches to the arguments as "-X" where X is the characters, do this first
+-- and process the rest as normal (note to self, must INSERT these additions to
+-- properly preserve order of arguments (INPUT [OPTIONS] [filename]))
+
+local function LuaFuck(...)
+    --NOTE TODO if silent option, locally replace print with nil function
+    arguments = {...}
+
+    -- initial options & easy outs
+    if (#arguments == 0) or selected("-h") or selected("--help") then
+        print(help)
+        return
+    elseif selected("-v") or selected("--version") then
+        print("LuaFuck " .. tostring(version))
+        return
+    else
+        options.IN_FILE = arguments[1]
+        options.OUT_FILE = arguments[1]:sub(1, -4)
     end
+
+    -- easy options
+    if selected("-V") or selected("--verbose") then
+        options.VERBOSE = true
+    end
+    if selected("-d") or selected("--debug") then
+        options.INSTRUCTION_SET = {
+            core = "debug",
+            post = "debug"
+        }
+    end
+
+    -- difficult options
+    local yes, arg = selected("-o")
+    if yes then
+        options.OUT_FILE = arguments[arg+1]
+    else
+        yes, arg = fuzzySelected("--out=")
+        if yes then
+            options.OUT_FILE = arguments[arg]:sub(7)
+        end
+    end
+
+    -- make sure options.OUT_FILE ends with a ".lua"
+    if not options.OUT_FILE:find(".lua") then
+        options.OUT_FILE = options.OUT_FILE .. ".lua"
+    end
+
+    -- do some verbose shit, man
+    if options.VERBOSE then
+        print("Verbose mode activated!")
+        print("Parsed options:")
+
+        printTable(options)
+
+        return "FUCK TEMPRAORYFH CODED NEUDI WJA"
+    end
+
+    -- check that our input file exists
+    local file = io.open(options.IN_FILE, "r")
+    if file ~= nil then
+        file:close() -- everything is awesome
+    else
+        print("ERROR: Source file \"" .. options.IN_FILE .. "\" does not exist!")
+        return
+    end
+
+    -- set up what we will return / how we will write out data
+    --  required     -> return compiled string
+    --  command-line -> return "" (and write to file)
+    local OUTPUT = ""
+    local outHandle = {}
+    if options.TO_FILE then
+        if options.VERBOSE then
+            print("Opening \"" .. options.OUT_FILE .. "\" for output...")
+        end
+        outHandle = io.open(options.OUT_FILE, "w")
+    else
+        -- we fake it for the required version
+        outHandle.write = function(self, data)
+            OUTPUT = OUTPUT .. data
+        end
+        outHandle.close = function(self)
+        end
+    end
+
+    -- write bootstrap code
+    if options.VERBOSE then
+        print("Writing bootstrap code...")
+    end
+    -- these are the ONLY two writes that should not have a prepended space
+    outHandle:write(bootstrap.core[options.BOOTSTRAP.core])
+    outHandle:write(bootstrap.input[options.BOOTSTRAP.input])
+    outHandle:write(" " .. bootstrap.post[options.BOOTSTRAP.post])
+    if options.VERBOSE then
+        print("Done.")
+    end
+
+    -- write out instructions
+    --NOTE TODO add checking for mathcing [] by counting number of each encountered and warning on mismatch (erroring actually)
+    for line in io.lines(options.IN_FILE) do
+        if options.VERBOSE then
+            print("Processing line: \"" .. line .. "\"")
+        end
+
+        for i=1, line:len() do
+            local character = line:sub(i, i)
+            local CORE = instructions.core[options.INSTRUCTION_SET.core]
+            local POST = instructions.post[options.INSTRUCTION_SET.post]
+
+            -- CORE / POST are now mapped instructions, simply place them into
+            --  the output if they exist
+            if CORE[character] then
+                outHandle:write(" " .. CORE[character])
+                if options.VERBOSE then
+                    print("Wrote \"" .. character .. "\" as \"" .. CORE[character] .. "\" (core)")
+                end
+            end
+            if POST[character] then
+                outHandle:write(" " .. POST[character])
+                if options.VERBOSE then
+                    print("Wrote \"" .. character .. "\" as \"" .. POST[character] .. "\" (post)")
+                end
+            end
+        end
+    end
+
+    outHandle:close()
+    print("Compilation complete: \"" .. options.OUT_FILE .. "\"")
+
+    return OUTPUT
+end
+
+-- this file can be called directly OR required
+if arguments[1] ~= "luafuck" then
+    options.TO_FILE = true
+    return LuaFuck(...)
 else
-    OUT_FILE = arguments[argPlace-1]
+    return LuaFuck
 end
--- now make sure it has a proper extension!
-if not OUT_FILE:find(".lua") then
-    OUT_FILE = OUT_FILE .. ".lua"
-end
-
--- yay verbosity!
-if VERBOSE then
-    print(version.toString() .. " has started!")
-    print("ARGUMENTS:")
-    for k,v in pairs(arguments) do
-        print(k, v)
-    end
-    print("Options:")
-    print("OUT_FILE", OUT_FILE)
-    print("VERBOSE", VERBOSE)
-    print("DEBUG", DEBUG)
-    print("CONVERSION_SET", CONVERSION_SET, "(should say _debug at end if DEBUG == true)")
-    print("EXTENSIONS:")
-    for k,v in pairs(EXTENSIONS) do
-        print(k, v)
-    end
-    if #EXTENSIONS < 1 then
-        print(0, "none")
-    end
-end
-
-print("Beginning compilation of " .. OUT_FILE)
---TODO fix the fact that OUT_FILE is ...the input o.o
-
--- open output file
-local outFileHandle = io.open(OUT_FILE, "w")
-if VERBOSE then print("Opened "..OUT_FILE.." for output.") end
-
--- write bootstrap
-if VERBOSE then print("Writing bootstrap code...") end
-outFileHandle:write(bootstrap)
-if VERBOSE then print("Done.") end
-
--- loop through input file and process it
-if VERBOSE then print("Opening input...") end
-for line in io.lines(OUT_FILE) do
-    if VERBOSE then print("Read line:", line) end
-    for i=1,line:len() do
-        local character = line:sub(i,i)
-        if sets[CONVERSION_SET][character] then outFileHandle:write(sets[CONVERSION_SET][character]) end
-        if VERBOSE then print("Wrote to output:", sets[CONVERSION_SET][character]) end
-    end
-end
-
-if VERBOSE then print("Done. Closing files.") end
-outFileHandle:close()
-
-print("Compilation complete.")

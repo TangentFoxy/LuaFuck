@@ -12,7 +12,7 @@ Supports several command-line options and extensions, listed below.
 luafuck.lua - Compiles Brainfuck code into Lua code.
 
 ## SYNOPSIS
-lua luafuck.lua INPUT [OPTIONS] [filename]
+lua luafuck.lua [IN_FILE] [OPTIONS]
 
 (Note: OPTIONS must be specified individually. `-vds` won't work for example.)
 
@@ -30,9 +30,6 @@ lua luafuck.lua INPUT [OPTIONS] [filename]
   a list of extensions to enable
 - `-h, --help`<br>
   show this help
-
-(Note: Passing `--` won't stop further options from going through.
- Deal with it (possibly by submitting a patch for it).)
 
 ## EXTENSIONS
 No extensions are supported at this time. They will be in future versions.

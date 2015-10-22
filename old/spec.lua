@@ -1,3 +1,6 @@
+-- NOTE: This file is kept for historical reasons of I like looking at my
+--       original design. No other reason for its existence here.
+
 --[[ Brainfuck spec:
     > move pointer right
     < move pointer left
