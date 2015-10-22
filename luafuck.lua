@@ -53,8 +53,8 @@ FILES
 local bootstrap = {
     --TODO check if then can be condensed further by eliminating spaces after instances of "()"
     core = {
-        -- r is 0 and then immediately set to a function by bootstrap.input
-        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",0"
+        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",0",
+        debug = "local c,m,o,w,i,b,r,t=0,{},string.char,io.write,string.byte,\"\",0,0"
     },
     input = {
         default = "r=function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end"
@@ -78,14 +78,22 @@ local instructions = {
             ["]"] = "end"
         },
         debug = {
-            [">"] = "c=c+1 print('POINTER: '..(c-1)..' > '..c)",
-            ["<"] = "c=c-1 print('POINTER: '..c..' < '..(c+1))",
-            ["+"] = "local t=m[c] m[c]=m[c]+1 w('CELL++: ')",
-            ["-"] = "local t=m[c] m[c]=m[c]-1 w('CELL--: ')",
-            ["."] = "local t=o(m[c]) w(t) if t==nil then t='nil' end print('PRINT: '..m[c]..' # '..t)",
-            [","] = "local t=r() m[c]=i(t) if t==nil then t='nil' end print('READ: '..t..' => '..m[c])",
-            ["["] = "print('WHILE NOT 0: START?\nCELL: '..m[c]) while m[c]~=0 do print('WHILE NOT 0: RUNNING')",
+            [">"] = "c=c+1 print('POINTER++: '..(c-1)..' => '..c)",
+            ["<"] = "c=c-1 print('POINTER--: '..(c+1)..' => '..c)",
+            ["+"] = "t=m[c] m[c]=m[c]+1 w('CELL++:    ')",
+            ["-"] = "t=m[c] m[c]=m[c]-1 w('CELL--:    ')",
+            ["."] = "t=o(m[c]) w(t) if t==nil then t='nil' end print('PRINT: '..m[c]..' # '..t)",
+            [","] = "t=r() m[c]=i(t) if t==nil then t='nil' end print('READ: '..t..' => '..m[c])",
+            ["["] = "print('WHILE NOT 0: START?\\nVALUE: '..m[c]) while m[c]~=0 do print('VALUE: '..m[c]..'\\nWHILE NOT 0: RUNNING')",
             ["]"] = "end print('WHILE NOT 0: OVER')"
+        },
+        optimized = {
+            --TODO modify main loop to fall back on a failed match to this, so that
+            -- the other commands still work without having to check here
+            [">"] = "c=c+",
+            ["<"] = "c=c-",
+            ["+"] = "m[c]=m[c]+",
+            ["-"] = "m[c]=m[c]-"
         }
     },
     post = {
@@ -96,6 +104,10 @@ local instructions = {
         debug = {
             ["+"] = "if m[c]>255 then m[c]=0 end print(t..' => '..m[c])",
             ["-"] = "if m[c]<0 then m[c]=255 end print(t..' => '..m[c])"
+        },
+        optimized = {
+            ["+"] = "while m[c]>255 do m[c]=m[c]-256 end",
+            ["-"] = "while m[c]<0 do m[c]=m[c]+256 end"
         }
     }
 }
@@ -114,6 +126,7 @@ local options = {
     INSTRUCTION_SET = {
         core = "default",
         post = "default"
+        --fallback = "default" --the idea here is to have a fallback defined that is a complete set of instructions
     },
     EXTENSIONS = {},
 
@@ -196,6 +209,7 @@ local function LuaFuck(...)
         options.VERBOSE = true
     end
     if selected("-d") or selected("--debug") then
+        options.BOOTSTRAP.core = "debug"
         options.INSTRUCTION_SET = {
             core = "debug",
             post = "debug"
