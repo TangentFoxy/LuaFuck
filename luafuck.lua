@@ -38,6 +38,7 @@ OPTIONS
         output filename to use (will append .lua to it if you don't)
     -e extension1 extension2, --extensions=extension1,extension2
         a list of extensions to enable
+        (note: only the --extensions= form is supported right now!)
     -h, --help
         show this help
 
