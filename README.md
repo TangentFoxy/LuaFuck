@@ -27,7 +27,8 @@ lua luafuck.lua [IN_FILE] [OPTIONS]
 - `-o filename, --out=filename`<br>
   output filename to use (will append .lua to it if you don't)
 - `-e extension1 extension2, --extensions=extension1,extension2`<br>
-  a list of extensions to enable
+  a list of extensions to enable<br>
+  (note: only the `--extensions=` form works right now!)
 - `-h, --help`<br>
   show this help
 
