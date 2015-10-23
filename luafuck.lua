@@ -49,13 +49,13 @@ EXTENSIONS
 local bootstrap = {
     --TODO check if then can be condensed further by eliminating spaces after instances of "()"
     core = {
-        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",0",
-        debug = "local c,m,o,w,i,b,r,t=0,{},string.char,io.write,string.byte,\"\",0,0"
+        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,'',0",
+        debug = "local c,m,o,w,i,b,r,t=0,{},string.char,io.write,string.byte,'',0,0"
     },
     input = {
         default = "r=function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end",
         -- this debug is the extension, the other debugs are --debug option
-        debug = "local B,Bc=0,false r=function() if not Bc then B() end if b:len()==0 then return 0 end local o=b:sub(1,1) b=b:sub(2) return o end"
+        debug = "r=function() if b:len()==0 then return '' end local o=b:sub(1,1) b=b:sub(2) return o end local function M()"
     },
     post = {
         default = "setmetatable(m,{__index=function() return 0 end})"
@@ -106,13 +106,21 @@ local instructions = {
         optimized = {
             ["+"] = "while m[c]>255 do m[c]=m[c]-256 end",
             ["-"] = "while m[c]<0 do m[c]=m[c]+256 end"
-        }
+        },
     },
-    extra = {
+    extend = {
         debug = {
             ["#"] = "for i=0,9 do w('m['..c..']='..m[c]..',') end w('\\n') for i=c-4,c+4 do w('m['..c..']='..m[c]..',') end",
-            ["!"] = "B=function() b='" -- we have the read buffer in the code
-        }
+            ["!"] = "end b='" -- we have the read buffer in the code
+        },
+        -- 30k option
+        -- placed here even though it's not an extension, because
+        --  if placed elsewhere, would break other options
+        --NOTE actually, this would break trying to use debug extension and 30k option at the same time
+        --["30k"] = {
+        --    [">"] = "if c>30000 then c=0 end",
+        --    ["<"] = "if c<0 then c=30000 end"
+        --}
     }
 }
 
@@ -139,14 +147,15 @@ local options = {
     },
     INSTRUCTION_SET = {
         core = "default",
-        post = "default"
-        --fallback = "default" --the idea here is to have a fallback defined that is a complete set of instructions
+        post = "default",
+        --fallback = "default" -- the idea here is to have a fallback defined that is a complete set of instructions
     },
     EXTENSIONS = {},
     FLAGS ={}, -- used for extension handling
 
     VERBOSE = false,
     DEBUG = false,
+    ["30K"] = false
 }
 
 -- extra processing required to use extensions
@@ -177,7 +186,7 @@ local extensions = {
 
         post = function(handle)
             if options.FLAGS.debug then
-                handle:write("' Bc=true end") -- end read buffer
+                handle:write("' M()") -- end read buffer
                 return true
             else
                 return false
@@ -273,9 +282,14 @@ local function LuaFuck(...)
         options.VERBOSE = true
     end
     if selected("-d") or selected("--debug") then
+        options.DEBUG = true
         options.BOOTSTRAP.core = "debug"
         options.INSTRUCTION_SET.core = "debug"
         options.INSTRUCTION_SET.post = "debug"
+    end
+    if selected("-3") or selected("--30k") then
+        options["30K"] = true
+        --TODO actually implement this
     end
 
     -- difficult options
@@ -308,7 +322,7 @@ local function LuaFuck(...)
     for _,v in ipairs(options.EXTENSIONS) do
         if v == "debug" then
             options.BOOTSTRAP.input = "debug"
-            options.INSTRUCTION_SET.extra = "debug"
+            options.INSTRUCTION_SET.extend = "debug"
         end
     end
 
@@ -370,7 +384,7 @@ local function LuaFuck(...)
     -- encountered and warning on mismatch (erroring actually)
     local CORE = instructions.core[options.INSTRUCTION_SET.core]
     local POST = instructions.post[options.INSTRUCTION_SET.post]
-    local EXTRA = instructions.extra[options.INSTRUCTION_SET.extra]
+    local EXTEND = instructions.extend[options.INSTRUCTION_SET.extend]
 
     for line in io.lines(options.IN_FILE) do
         if options.VERBOSE then
@@ -405,10 +419,10 @@ local function LuaFuck(...)
                         print("Wrote \"" .. character .. "\" as \"" .. POST[character] .. "\" (post)")
                     end
                 end
-                if EXTRA and EXTRA[character] then
-                    outHandle:write(" " .. EXTRA[character])
+                if EXTEND and EXTEND[character] then
+                    outHandle:write(" " .. EXTEND[character])
                     if options.VERBOSE then
-                        print("Wrote \"" .. character .. "\" as \"" .. EXTRA[character] .. "\" (extra)")
+                        print("Wrote \"" .. character .. "\" as \"" .. EXTEND[character] .. "\" (extra)")
                     end
                 end
             end
