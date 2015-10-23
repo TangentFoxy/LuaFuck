@@ -32,7 +32,10 @@ lua luafuck.lua [IN_FILE] [OPTIONS]
   show this help
 
 ## EXTENSIONS
-No extensions are supported at this time. They will be in future versions.
 
-For an idea of what an extension might be, check this project's issues:
-https://github.com/Guard13007/LuaFuck/issues
+- debug
+  - Adds # and ! instructions.<br>
+    # prints out the first 10 memory cells, and 9 memory cells surrounding
+      the currently selected memory cell.<br>
+    ! makes the rest of the file get placed into the input buffer. (Instead
+      of reading from keyboard.)

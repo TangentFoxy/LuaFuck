@@ -1,8 +1,8 @@
 -- using semantic versioning
 local version = {
     major = 0,
-    minor = 1,
-    patch = 1
+    minor = 2,
+    patch = 0
 }
 --function version.toString()
 --    return "v"..version.major.."."..version.minor.."."..version.patch.."-Dagobah"
@@ -42,7 +42,12 @@ OPTIONS
         show this help
 
 EXTENSIONS
-    No extensions are supported at this time. They will be in future versions.
+    debug
+        Adds # and ! instructions.
+        # prints out the first 10 memory cells, and 9 memory cells surrounding
+          the currently selected memory cell.
+        ! makes the rest of the file get placed into the input buffer. (Instead
+          of reading from keyboard.)
 ]]
 
 -- extra start code to support direct translation of instructions
@@ -110,7 +115,7 @@ local instructions = {
     },
     extend = {
         debug = {
-            ["#"] = "for i=0,9 do w('m['..c..']='..m[c]..',') end w('\\n') for i=c-4,c+4 do w('m['..c..']='..m[c]..',') end",
+            ["#"] = "for i=0,9 do w('m['..c..']='..m[c]..',') end w('\\n') for i=c-4,c+4 do w('m['..i..']='..m[i]..',') end",
             ["!"] = "end b='" -- we have the read buffer in the code
         },
         -- 30k option
@@ -130,7 +135,7 @@ local instructions = {
     end
     w('\\n')
     for i=c-4,c+4 do
-        w('m['..c..']='..m[c]..',')
+        w('m['..i..']='..m[i]..',')
     end
 --]]
 
