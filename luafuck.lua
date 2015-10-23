@@ -222,6 +222,25 @@ local function LuaFuck(...)
             options.OUT_FILE = arguments[arg]:sub(7)
         end
     end
+    -- extension option
+    yes, arg = selected("-e")
+    if yes then
+        --TODO we need a way make sure every argument we grab past arguments[arg]
+        --      is NOT another argument (and thus, is an extension to grab)
+        --IDEA commands {} holding "-v", "-h", etc, check against these before parsing it
+        --      and then fuzzyCommands {} holding "--out=", "--extensions=" etc
+        -- if arg does not match one of commands{} or beginning of fuzzyCommands{},
+        --  it is an extension
+    else
+        yes, arg = fuzzySelected("--extensions=")
+        if yes then
+            local extensions = arguments[arg]:sub(14) --TODO remove this assignment
+            --TODO now process than (based on "," separator) into extensions
+        end
+    end
+
+    -- handle any changes to options based on chosen extensions
+    --TODO loop through extensions and set options
 
     -- make sure options.OUT_FILE ends with a ".lua"
     if not options.OUT_FILE:find(".lua") then
