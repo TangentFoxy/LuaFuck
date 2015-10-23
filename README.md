@@ -35,8 +35,8 @@ lua luafuck.lua [IN_FILE] [OPTIONS]
 ## EXTENSIONS
 
 - debug
-  - Adds # and ! instructions.<br>
-    # prints out the first 10 memory cells, and 9 memory cells surrounding
+  - Adds **#** and **!** instructions.<br>
+    **#** prints out the first 10 memory cells, and 9 memory cells surrounding
       the currently selected memory cell.<br>
-    ! makes the rest of the file get placed into the input buffer. (Instead
+    **!** makes the rest of the file get placed into the input buffer. (Instead
       of reading from keyboard.)
