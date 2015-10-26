@@ -1,8 +1,8 @@
 -- using semantic versioning
 local version = {
     major = 0,
-    minor = 1,
-    patch = 1
+    minor = 2,
+    patch = 0
 }
 --function version.toString()
 --    return "v"..version.major.."."..version.minor.."."..version.patch.."-Dagobah"
@@ -38,22 +38,30 @@ OPTIONS
         output filename to use (will append .lua to it if you don't)
     -e extension1 extension2, --extensions=extension1,extension2
         a list of extensions to enable
+        (note: only the --extensions= form is supported right now!)
     -h, --help
         show this help
 
 EXTENSIONS
-    No extensions are supported at this time. They will be in future versions.
+    debug
+        Adds # and ! instructions.
+        # prints out the first 10 memory cells, and 9 memory cells surrounding
+          the currently selected memory cell.
+        ! makes the rest of the file get placed into the input buffer. (Instead
+          of reading from keyboard.)
 ]]
 
 -- extra start code to support direct translation of instructions
 local bootstrap = {
     --TODO check if then can be condensed further by eliminating spaces after instances of "()"
     core = {
-        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,\"\",0",
-        debug = "local c,m,o,w,i,b,r,t=0,{},string.char,io.write,string.byte,\"\",0,0"
+        default = "local c,m,o,w,i,b,r=0,{},string.char,io.write,string.byte,'',0",
+        debug = "local c,m,o,w,i,b,r,t=0,{},string.char,io.write,string.byte,'',0,0"
     },
     input = {
-        default = "r=function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end"
+        default = "r=function() if b:len()==0 then b=io.read() end local o=b:sub(1,1) b=b:sub(2) return o end",
+        -- this debug is the extension, the other debugs are --debug option
+        debug = "r=function() if b:len()==0 then return '' end local o=b:sub(1,1) b=b:sub(2) return o end local function M()"
     },
     post = {
         default = "setmetatable(m,{__index=function() return 0 end})"
@@ -104,9 +112,33 @@ local instructions = {
         optimized = {
             ["+"] = "while m[c]>255 do m[c]=m[c]-256 end",
             ["-"] = "while m[c]<0 do m[c]=m[c]+256 end"
-        }
+        },
+    },
+    extend = {
+        debug = {
+            ["#"] = "for i=0,9 do w('m['..c..']='..m[c]..',') end w('\\n') for i=c-4,c+4 do w('m['..i..']='..m[i]..',') end",
+            ["!"] = "end b='" -- we have the read buffer in the code
+        },
+        -- 30k option
+        -- placed here even though it's not an extension, because
+        --  if placed elsewhere, would break other options
+        --NOTE actually, this would break trying to use debug extension and 30k option at the same time
+        --["30k"] = {
+        --    [">"] = "if c>30000 then c=0 end",
+        --    ["<"] = "if c<0 then c=30000 end"
+        --}
     }
 }
+
+--[[ debug extension # command
+    for i=0,9 do
+        w('m['..c..']='..m[c]..',')
+    end
+    w('\\n')
+    for i=c-4,c+4 do
+        w('m['..i..']='..m[i]..',')
+    end
+--]]
 
 -- compile options, including extensions enabled
 local options = {
@@ -121,13 +153,52 @@ local options = {
     },
     INSTRUCTION_SET = {
         core = "default",
-        post = "default"
-        --fallback = "default" --the idea here is to have a fallback defined that is a complete set of instructions
+        post = "default",
+        --fallback = "default" -- the idea here is to have a fallback defined that is a complete set of instructions
     },
     EXTENSIONS = {},
+    FLAGS ={}, -- used for extension handling
 
     VERBOSE = false,
     DEBUG = false,
+    ["30K"] = false
+}
+
+-- extra processing required to use extensions
+local extensions = {
+    debug = {
+        instruction = function(handle, character)
+            if options.FLAGS.debug then
+                if character == "\\" then
+                    handle:write("\\\\")
+                elseif character == "'" then
+                    handle:write("\\'")
+                --TODO fix the fact that we don't properly
+                -- handle newlines (they are handled by the
+                -- for loop we are in!!)
+                --elseif character == "\n" then
+                --    handle:write("\\n")
+                else
+                    handle:write(character)
+                end
+                return true
+            else
+                if character == "!" then
+                    options.FLAGS.debug = true
+                end
+            end
+            return false
+        end,
+
+        post = function(handle)
+            if options.FLAGS.debug then
+                handle:write("' M()") -- end read buffer
+                return true
+            else
+                return false
+            end
+        end
+    }
 }
 
 -- argument handling
@@ -178,6 +249,18 @@ local function printTable(Table, currentDepth)
     print(SPACER .. "}")
 end
 
+-- used in grabbing extensions, only splits based on commas
+local function split(str)
+    local words = {}
+
+    for word in string.gmatch(str, '([^,]+)') do
+        print(word)
+        table.insert(words, word)
+    end
+
+    return words
+end
+
 --TODO check for option strings (like -sdw or whatever) by doing a search for an
 -- arg that starts with a - and has more than 2 characters length, then parse
 -- any matches to the arguments as "-X" where X is the characters, do this first
@@ -205,11 +288,14 @@ local function LuaFuck(...)
         options.VERBOSE = true
     end
     if selected("-d") or selected("--debug") then
+        options.DEBUG = true
         options.BOOTSTRAP.core = "debug"
-        options.INSTRUCTION_SET = {
-            core = "debug",
-            post = "debug"
-        }
+        options.INSTRUCTION_SET.core = "debug"
+        options.INSTRUCTION_SET.post = "debug"
+    end
+    if selected("-3") or selected("--30k") then
+        options["30K"] = true
+        --TODO actually implement this
     end
 
     -- difficult options
@@ -234,13 +320,17 @@ local function LuaFuck(...)
     else
         yes, arg = fuzzySelected("--extensions=")
         if yes then
-            local extensions = arguments[arg]:sub(14) --TODO remove this assignment
-            --TODO now process than (based on "," separator) into extensions
+            options.EXTENSIONS = split(arguments[arg]:sub(14))
         end
     end
 
     -- handle any changes to options based on chosen extensions
-    --TODO loop through extensions and set options
+    for _,v in ipairs(options.EXTENSIONS) do
+        if v == "debug" then
+            options.BOOTSTRAP.input = "debug"
+            options.INSTRUCTION_SET.extend = "debug"
+        end
+    end
 
     -- make sure options.OUT_FILE ends with a ".lua"
     if not options.OUT_FILE:find(".lua") then
@@ -296,7 +386,12 @@ local function LuaFuck(...)
     end
 
     -- write out instructions
-    --NOTE TODO add checking for mathcing [] by counting number of each encountered and warning on mismatch (erroring actually)
+    --NOTE TODO add checking for mathcing [] by counting number of each
+    -- encountered and warning on mismatch (erroring actually)
+    local CORE = instructions.core[options.INSTRUCTION_SET.core]
+    local POST = instructions.post[options.INSTRUCTION_SET.post]
+    local EXTEND = instructions.extend[options.INSTRUCTION_SET.extend]
+
     for line in io.lines(options.IN_FILE) do
         if options.VERBOSE then
             print("Processing line: \"" .. line .. "\"")
@@ -304,23 +399,46 @@ local function LuaFuck(...)
 
         for i=1, line:len() do
             local character = line:sub(i, i)
-            local CORE = instructions.core[options.INSTRUCTION_SET.core]
-            local POST = instructions.post[options.INSTRUCTION_SET.post]
 
-            -- CORE / POST are now mapped instructions, simply place them into
-            --  the output if they exist
-            if CORE[character] then
-                outHandle:write(" " .. CORE[character])
-                if options.VERBOSE then
-                    print("Wrote \"" .. character .. "\" as \"" .. CORE[character] .. "\" (core)")
+            -- extension handling
+            local handled = false
+            for _,v in ipairs(options.EXTENSIONS) do
+                handled = extensions[v].instruction(outHandle, character)
+                if handled then
+                    -- I think this is appropriate, the first extension to
+                    --  handle something handles it, we're done
+                    break
                 end
             end
-            if POST[character] then
-                outHandle:write(" " .. POST[character])
-                if options.VERBOSE then
-                    print("Wrote \"" .. character .. "\" as \"" .. POST[character] .. "\" (post)")
+
+            -- normal instruction mapping
+            if not handled then
+                if CORE and CORE[character] then
+                    outHandle:write(" " .. CORE[character])
+                    if options.VERBOSE then
+                        print("Wrote \"" .. character .. "\" as \"" .. CORE[character] .. "\" (core)")
+                    end
+                end
+                if POST and POST[character] then
+                    outHandle:write(" " .. POST[character])
+                    if options.VERBOSE then
+                        print("Wrote \"" .. character .. "\" as \"" .. POST[character] .. "\" (post)")
+                    end
+                end
+                if EXTEND and EXTEND[character] then
+                    outHandle:write(" " .. EXTEND[character])
+                    if options.VERBOSE then
+                        print("Wrote \"" .. character .. "\" as \"" .. EXTEND[character] .. "\" (extra)")
+                    end
                 end
             end
+        end
+    end
+
+    -- extension handling
+    for _,v in ipairs(options.EXTENSIONS) do
+        if extensions[v].post(outHandle) then
+            break
         end
     end
 

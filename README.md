@@ -27,12 +27,16 @@ lua luafuck.lua [IN_FILE] [OPTIONS]
 - `-o filename, --out=filename`<br>
   output filename to use (will append .lua to it if you don't)
 - `-e extension1 extension2, --extensions=extension1,extension2`<br>
-  a list of extensions to enable
+  a list of extensions to enable<br>
+  (note: only the `--extensions=` form works right now!)
 - `-h, --help`<br>
   show this help
 
 ## EXTENSIONS
-No extensions are supported at this time. They will be in future versions.
 
-For an idea of what an extension might be, check this project's issues:
-https://github.com/Guard13007/LuaFuck/issues
+- debug
+  - Adds `#` and `!` instructions.<br>
+    `#` prints out the first 10 memory cells, and 9 memory cells surrounding
+      the currently selected memory cell.<br>
+    `!` makes the rest of the file get placed into the input buffer. (Instead
+      of reading from keyboard.)
