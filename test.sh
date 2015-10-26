@@ -36,5 +36,12 @@ echo "Since we were cat'ing so much, let's tac:"
 lua ./luafuck.lua ./testing/tac.bf
 lua ./testing/tac.lua
 
-echo "Let's test the debug extension! This program is moving a value from cell 0 to cell 2, and the debug print command is used to show the state before and after execution:"
-lua ./luafuck.lua ./testing/moveval.bf -e debug
+echo "Let's test the debug extension! This program is moving a value from cell 0 to   cell 2, and the debug print command is used to show the state before and after  execution:"
+# -e doesn't work yet, fool!
+#lua ./luafuck.lua ./testing/moveval.bf -e debug -V
+lua ./luafuck.lua ./testing/moveval.bf -extensions=debug
+lua ./testing/moveval.lua
+
+echo "And now a really simply printing of every possible character that can be printed:"
+lua ./luafuck.lua ./testing/printAllValues.bf
+lua ./testing/printAllValues.lua

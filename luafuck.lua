@@ -192,14 +192,16 @@ local extensions = {
 
         post = function(handle)
             if options.FLAGS.debug then
-                handle:write("' M()") -- end read buffer
+                handle:write("' M()") -- end read buffer, run everything
                 return true
             else
-                return false
+                handle:write(" end M()") -- read buffer was never started, end function and run it
+                return true
             end
         end
     }
 }
+--TODO give extensions metatable that will print error if attempting to use non-existent extension
 
 -- argument handling
 local arguments = {...}
@@ -237,12 +239,12 @@ local function printTable(Table, currentDepth)
 
     for k,v in pairs(Table) do
         if type(v) == "table" then
-            print(SPACER .. k .. " =")
+            print(" " .. SPACER .. k .. " =")
             printTable(v, currentDepth + 1)
         elseif type(v) == "string" then
-            print(SPACER .. k .. " = \"" .. v .. "\"")
+            print(" " .. SPACER .. k .. " = \"" .. v .. "\"")
         else
-            print(SPACER .. k .. " = " .. tostring(v))
+            print(" " .. SPACER .. k .. " = " .. tostring(v))
         end
     end
 
@@ -320,7 +322,7 @@ local function LuaFuck(...)
     else
         yes, arg = fuzzySelected("--extensions=")
         if yes then
-            options.EXTENSIONS = split(arguments[arg]:sub(14))
+            options.EXTENSIONS = split(arguments[arg]:sub(13))
         end
     end
 
@@ -397,6 +399,8 @@ local function LuaFuck(...)
             print("Processing line: \"" .. line .. "\"")
         end
 
+        --TODO place pseudo-call for a newline here!!
+
         for i=1, line:len() do
             local character = line:sub(i, i)
 
@@ -416,19 +420,19 @@ local function LuaFuck(...)
                 if CORE and CORE[character] then
                     outHandle:write(" " .. CORE[character])
                     if options.VERBOSE then
-                        print("Wrote \"" .. character .. "\" as \"" .. CORE[character] .. "\" (core)")
+                        print("(core)    Wrote: \"" .. character .. "\" as \"" .. CORE[character] .. "\"")
                     end
                 end
                 if POST and POST[character] then
                     outHandle:write(" " .. POST[character])
                     if options.VERBOSE then
-                        print("Wrote \"" .. character .. "\" as \"" .. POST[character] .. "\" (post)")
+                        print("(post)    Wrote: \"" .. character .. "\" as \"" .. POST[character] .. "\"")
                     end
                 end
                 if EXTEND and EXTEND[character] then
                     outHandle:write(" " .. EXTEND[character])
                     if options.VERBOSE then
-                        print("Wrote \"" .. character .. "\" as \"" .. EXTEND[character] .. "\" (extra)")
+                        print("(extra)   Wrote: \"" .. character .. "\" as \"" .. EXTEND[character] .. "\"")
                     end
                 end
             end
