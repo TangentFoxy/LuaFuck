@@ -7,7 +7,8 @@ Tac: also known as cat; but backwards
 [<.] go left and output (til we reach that starting NULL of course)
 
 [uneeded, just prettifies the output (when running from terminal) by putting an extra \n
- (also note that none of the code will be run that's in here)
+ (also note that none of the code will be run that's in here,
+  because it is in a loop immediately following a loop)
  +>.><--+., Woo!
 ]
 

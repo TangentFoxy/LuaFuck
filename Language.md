@@ -44,3 +44,5 @@ compiler uses 10, most interpreters/compilers expect 10.
     (methods to execute certain basic calculations)
   - [Brainfuck constants](https://esolangs.org/wiki/Brainfuck_constants)
     (ways of getting particular values into a memory cell)
+- [ASCII Reference](http://www.asciitable.com/)
+  (note: not all of these will display properly)
