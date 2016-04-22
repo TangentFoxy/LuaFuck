@@ -1,4 +1,10 @@
 # LuaFuck
+
+[![GitHub release](https://img.shields.io/github/release/Guard13007/LuaFuck.svg?maxAge=2592000)](https://github.com/Guard13007/LuaFuck/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/Guard13007/LuaFuck/latest/total.svg?maxAge=2592000)](https://github.com/Guard13007/LuaFuck/releases/latest)
+[![GitHub issues](https://img.shields.io/github/issues-raw/Guard13007/LuaFuck.svg?maxAge=2592000)](https://github.com/Guard13007/LuaFuck/issues)
+[![GitHub license](https://img.shields.io/github/license/Guard13007/LuaFuck.svg?maxAge=2592000)](https://github.com/Guard13007/LuaFuck/blob/master/LICENSE)
+
 Translation program to run Brainfuck code in Lua.
 
 Supports several command-line options and extensions, listed below.
